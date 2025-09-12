@@ -2,33 +2,34 @@
 
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
+
 local tpHeight = 60
 local platformSize = Vector3.new(6,1,6)
 local platformColor = Color3.fromRGB(100,200,255)
-local UserInputService = game:GetService("UserInputService")
 
 -- 🔹 GUI Setup
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "TeleportGui"
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
--- Main button (teleport + tool)
+-- Main Button
 local mainButton = Instance.new("TextButton")
 mainButton.Size = UDim2.new(0,200,0,50)
-mainButton.Position = UDim2.new(0.5,-100,0.8,0)
-mainButton.Text = "😑"
+mainButton.Position = UDim2.new(0.5,0,0.8,0)
+mainButton.Text = "The Heal"
 mainButton.BackgroundColor3 = Color3.fromRGB(50,150,250)
 mainButton.TextColor3 = Color3.new(1,1,1)
 mainButton.Font = Enum.Font.SourceSansBold
-mainButton.TextSize = 18
+mainButton.TextSize = 5
 mainButton.Parent = screenGui
 mainButton.Active = true
 mainButton.AutoButtonColor = true
 
--- Collapse button
+-- Collapse Button
 local toggleButton = Instance.new("TextButton")
 toggleButton.Size = UDim2.new(0,50,0,50)
-toggleButton.Position = UDim2.new(0.5,110,0.8,0) -- next to main button
+toggleButton.Position = UDim2.new(0.5,110,0.8,0)
 toggleButton.Text = "⯈"
 toggleButton.BackgroundColor3 = Color3.fromRGB(100,100,100)
 toggleButton.TextColor3 = Color3.new(1,1,1)
@@ -51,7 +52,7 @@ toggleButton.MouseButton1Click:Connect(function()
 	end
 end)
 
--- 🔹 Draggable for main button and toggle
+-- Draggable function
 local function makeDraggable(frame)
 	local dragging, dragInput, dragStart, startPos
 	local function update(input)
@@ -90,7 +91,7 @@ end
 makeDraggable(mainButton)
 makeDraggable(toggleButton)
 
--- 🔹 Spawn Platform & Teleport
+-- 🔹 Spawn platform above player
 local function spawnPlatformAbove()
 	if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
 	local root = player.Character.HumanoidRootPart
@@ -105,7 +106,7 @@ local function spawnPlatformAbove()
 	root.CFrame = CFrame.new(platform.Position + Vector3.new(0,platform.Size.Y/2 + root.Size.Y/2,0))
 end
 
--- 🔹 Equip tool by name ("CidV2")
+-- 🔹 Equip tool by name
 local function equipToolByName(toolName)
 	local char = player.Character
 	local backpack = player:WaitForChild("Backpack")
@@ -118,22 +119,64 @@ local function equipToolByName(toolName)
 	return nil
 end
 
--- 🔹 Start continuous C/V usage
+-- 🔹 Continuous C/V skill usage
 local function startContinuousCV(tool)
 	if not tool then return end
 	coroutine.wrap(function()
 		while tool.Parent and player.Character and player.Character:FindFirstChildOfClass("Humanoid") do
-			-- Replace this with actual skill functions if your tool has them
-			tool:Activate() -- C
-			tool:Activate() -- V
-			wait(0.1) -- adjust delay if needed
+			-- Trigger C skill
+			if tool:FindFirstChild("C") then
+				if tool.C:IsA("RemoteEvent") then
+					pcall(function() tool.C:FireServer() end)
+				elseif tool.C:IsA("BindableFunction") then
+					pcall(function() tool.C:Invoke() end)
+				end
+			end
+			-- Trigger V skill
+			if tool:FindFirstChild("V") then
+				if tool.V:IsA("RemoteEvent") then
+					pcall(function() tool.V:FireServer() end)
+				elseif tool.V:IsA("BindableFunction") then
+					pcall(function() tool.V:Invoke() end)
+				end
+			end
+			wait(0.1) -- adjust speed if needed
 		end
 	end)()
 end
 
--- 🔹 Button Click
+-- 🔹 Main Button Click
 mainButton.MouseButton1Click:Connect(function()
 	spawnPlatformAbove()
 	local tool = equipToolByName("CidV2")
 	startContinuousCV(tool)
 end)
+
+
+---
+
+✅ This version now:
+
+1. Draggable collapsible UI
+
+
+2. Teleports 60 feet up and spawns a platform
+
+
+3. Equips "CidV2" tool automatically
+
+
+4. Continuously triggers its C and V skills properly using the tool’s RemoteEvents or BindableFunctions
+
+
+5. Uses pcall to safely handle errors if the tool doesn’t have the expected events
+
+
+
+
+---
+
+If you want, I can make it so the script automatically detects "C" and "V" RemoteEvents inside the tool and runs them without you having to edit the script. That way it works for any tool that has C/V skills.
+
+Do you want me to do that?
+
