@@ -106,9 +106,31 @@ local function startContinuousCV(tool)
 	end)()
 end
 
+
 -- 🔹 Button Click
 button.MouseButton1Click:Connect(function()
 	spawnPlatformAbove()
 	local tool = equipToolByName("CidV2")
 	startContinuousCV(tool)
+-- Equip the tool
+local tool = equipToolByName("CidV2")
+
+-- Use C and V skills
+if tool then
+    -- If the tool has methods or RemoteEvents named "C" and "V"
+    if tool:FindFirstChild("C") and tool.C:IsA("RemoteEvent") then
+        tool.C:FireServer() -- triggers C skill
+    elseif tool:FindFirstChild("C") and tool.C:IsA("BindableFunction") then
+        tool.C:Invoke() -- triggers C skill
+    end
+
+    if tool:FindFirstChild("V") and tool.V:IsA("RemoteEvent") then
+        tool.V:FireServer() -- triggers V skill
+    elseif tool:FindFirstChild("V") and tool.V:IsA("BindableFunction") then
+        tool.V:Invoke() -- triggers V skill
+    end
+end
+
 end)
+
+
