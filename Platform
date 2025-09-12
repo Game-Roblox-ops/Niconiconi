@@ -1,0 +1,127 @@
+-- LocalScript inside StarterPlayerScripts
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local tpHeight = 60
+local platformSize = Vector3.new(6,1,6)
+local platformColor = Color3.fromRGB(100,200,255)
+local UserInputService = game:GetService("UserInputService")
+
+-- 🔹 GUI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "TeleportGui"
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+local button = Instance.new("TextButton")
+button.Size = UDim2.new(0,200,0,50)
+button.Position = UDim2.new(0.5,-100,0.8,0)
+button.Text = "TP 60 + Platform + Use C/V"
+button.BackgroundColor3 = Color3.fromRGB(50,150,250)
+button.TextColor3 = Color3.new(1,1,1)
+button.Font = Enum.Font.SourceSansBold
+button.TextSize = 18
+button.Parent = screenGui
+button.Active = true
+button.AutoButtonColor = true
+
+-- 🔹 Draggable
+local dragging
+local dragInput
+local dragStart
+local startPos
+
+local function update(input)
+	local delta = input.Position - dragStart
+	button.Position = UDim2.new(
+		startPos.X.Scale,
+		startPos.X.Offset + delta.X,
+		startPos.Y.Scale,
+		startPos.Y.Offset + delta.Y
+	)
+end
+
+button.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = input.Position
+		startPos = button.Position
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+
+button.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement then
+		dragInput = input
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		update(input)
+	end
+end)
+
+-- 🔹 Spawn Platform & Teleport
+local function spawnPlatformAbove()
+	if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
+	local root = player.Character.HumanoidRootPart
+	local platform = Instance.new("Part")
+	platform.Size = platformSize
+	platform.Anchored = true
+	platform.CanCollide = true
+	platform.Color = platformColor
+	platform.Position = root.Position + Vector3.new(0,tpHeight,0)
+	platform.Name = "HighPlatform"
+	platform.Parent = workspace
+	root.CFrame = CFrame.new(platform.Position + Vector3.new(0,platform.Size.Y/2 + root.Size.Y/2,0))
+end
+
+-- 🔹 Equip first hotbar item (slot 1)
+local function equipFirstHotbarItem()
+	local backpack = player:WaitForChild("Backpack")
+	local char = player.Character
+	if not char then return nil end
+
+	local tools = backpack:GetChildren()
+	if #tools > 0 then
+		local firstTool = tools[1]
+		if firstTool:IsA("Tool") then
+			char:FindFirstChildOfClass("Humanoid"):EquipTool(firstTool)
+			return firstTool
+		end
+	end
+	return nil
+end
+
+-- 🔹 Use C and V skills of tool
+local function useCVSkills(tool)
+	if not tool then return end
+
+	-- Replace the following lines with the actual functions/remotes your tool uses
+	-- Example: if tool has BindableFunction/RemoteEvent for C and V:
+	-- tool.CSkill:Fire()
+	-- tool.VSkill:Fire()
+
+	-- If you don’t have custom functions, try calling Activate multiple times:
+	if tool:FindFirstChild("C") then
+		tool.C:Activate()
+	end
+	if tool:FindFirstChild("V") then
+		tool.V:Activate()
+	end
+
+	-- Demo fallback: just activate tool twice
+	tool:Activate() -- first press
+	tool:Activate() -- second press
+end
+
+-- 🔹 Button Click
+button.MouseButton1Click:Connect(function()
+	spawnPlatformAbove()
+	local tool = equipFirstHotbarItem()
+	useCVSkills(tool)
+end)
