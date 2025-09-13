@@ -1,19 +1,17 @@
--- LocalScript in StarterPlayerScripts
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 
--- Make the ScreenGui
+-- UI setup
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "PlatformUI"
-screenGui.ResetOnSpawn = false -- keeps UI after respawn
+screenGui.ResetOnSpawn = false
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
--- Make the button
 local button = Instance.new("TextButton")
 button.Name = "WPButton"
-button.Size = UDim2.new(0, 50, 0, 30) -- small size
+button.Size = UDim2.new(0, 50, 0, 30) -- small button
 button.Position = UDim2.new(0.5, -25, 0, 5) -- top center
 button.Text = "wp"
 button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
@@ -26,69 +24,71 @@ local followConnection
 local dragging = false
 local dragStart, startPos
 
--- Function to create + follow platform
+-- Create and follow platform
 local function makeFollowPlatform()
-    if platform then return end -- don’t make duplicates
+	if platform then return end
 
-    local character = player.Character or player.CharacterAdded:Wait()
-    local root = character:WaitForChild("HumanoidRootPart")
+	local character = player.Character or player.CharacterAdded:Wait()
+	local root = character:WaitForChild("HumanoidRootPart")
 
-    platform = Instance.new("Part")
-    platform.Size = Vector3.new(1000, 100, 1000) -- big thick floor
-    platform.Anchored = true
-    platform.CanCollide = true
-    platform.Color = Color3.fromRGB(120, 200, 120)
-    platform.Name = "FollowPlatform"
-    platform.Parent = workspace
+	platform = Instance.new("Part")
+	platform.Size = Vector3.new(1000, 100, 1000)
+	platform.Anchored = true
+	platform.CanCollide = true
+	platform.Color = Color3.fromRGB(120, 200, 120)
+	platform.Name = "FollowPlatform"
+	platform.Parent = workspace
 
-    followConnection = RunService.RenderStepped:Connect(function()
-        if character and root then
-            platform.Position = root.Position - Vector3.new(0, 10, 0) -- 10 studs below
-        end
-    end)
+	-- Follow loop with safe gap
+	followConnection = RunService.RenderStepped:Connect(function()
+		if character and root then
+			local safeGap = 5 -- distance under feet
+			local newY = root.Position.Y - (root.Size.Y/2) - 10 - safeGap
+			platform.Position = Vector3.new(root.Position.X, newY, root.Position.Z)
+		end
+	end)
 end
 
--- Button click: toggle platform
+-- Button click toggles ON/OFF
 button.MouseButton1Click:Connect(function()
-    if not platform then
-        makeFollowPlatform()
-        button.Text = "wp (ON)"
-    else
-        -- Remove platform + stop updating
-        if followConnection then
-            followConnection:Disconnect()
-            followConnection = nil
-        end
-        platform:Destroy()
-        platform = nil
-        button.Text = "wp"
-    end
+	if not platform then
+		makeFollowPlatform()
+		button.Text = "wp (ON)"
+	else
+		if followConnection then
+			followConnection:Disconnect()
+			followConnection = nil
+		end
+		platform:Destroy()
+		platform = nil
+		button.Text = "wp (OFF)"
+		wait(0.5)
+		button.Text = "wp"
+	end
 end)
 
 -- Make button draggable
 button.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = button.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
-    end
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = button.Position
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
 end)
 
 button.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        if dragging then
-            local delta = input.Position - dragStart
-            button.Position = UDim2.new(
-                startPos.X.Scale,
-                startPos.X.Offset + delta.X,
-                startPos.Y.Scale,
-                startPos.Y.Offset + delta.Y
-            )
-        end
-    end
+	if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragging then
+		local delta = input.Position - dragStart
+		button.Position = UDim2.new(
+			startPos.X.Scale,
+			startPos.X.Offset + delta.X,
+			startPos.Y.Scale,
+			startPos.Y.Offset + delta.Y
+		)
+	end
 end)
