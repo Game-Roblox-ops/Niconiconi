@@ -32,7 +32,7 @@ local function makeFollowPlatform()
 	local root = character:WaitForChild("HumanoidRootPart")
 
 	platform = Instance.new("Part")
-	platform.Size = Vector3.new(1000, 100, 1000)
+	platform.Size = Vector3.new(10, 3, 10)
 	platform.Anchored = true
 	platform.CanCollide = true
 	platform.Color = Color3.fromRGB(120, 200, 120)
