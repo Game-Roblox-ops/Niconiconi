@@ -43,7 +43,7 @@ local function makeFollowPlatform()
 	followConnection = RunService.RenderStepped:Connect(function()
 		if character and root then
 			local safeGap = 5 -- distance under feet
-			local newY = root.Position.Y - (root.Size.Y/2) - -2.5 - safeGap
+			local newY = root.Position.Y - (root.Size.Y/2) - -2.2 - safeGap
 			platform.Position = Vector3.new(root.Position.X, newY, root.Position.Z)
 		end
 	end)
