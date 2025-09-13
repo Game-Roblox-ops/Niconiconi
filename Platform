@@ -1,146 +1,94 @@
--- LocalScript inside StarterPlayerScripts
-
+-- LocalScript in StarterPlayerScripts
 local Players = game:GetService("Players")
-local player = Players.LocalPlayer
+local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local player = Players.LocalPlayer
 
-local tpHeight = 60
-local platformSize = Vector3.new(6,1,6)
-local platformColor = Color3.fromRGB(100,200,255)
-
--- 🔹 GUI Setup
+-- Make the ScreenGui
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "TeleportGui"
+screenGui.Name = "PlatformUI"
+screenGui.ResetOnSpawn = false -- keeps UI after respawn
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
--- Main Button
-local mainButton = Instance.new("TextButton")
-mainButton.Size = UDim2.new(0,200,0,50)
-mainButton.Position = UDim2.new(0.5,-10,0.8,0)
-mainButton.Text = "The heal"
-mainButton.BackgroundColor3 = Color3.fromRGB(50,150,250)
-mainButton.TextColor3 = Color3.new(1,1,1)
-mainButton.Font = Enum.Font.SourceSansBold
-mainButton.TextSize = 18
-mainButton.Parent = screenGui
-mainButton.Active = true
-mainButton.AutoButtonColor = true
+-- Make the button
+local button = Instance.new("TextButton")
+button.Name = "WPButton"
+button.Size = UDim2.new(0, 50, 0, 30) -- small size
+button.Position = UDim2.new(0.5, -25, 0, 5) -- top center
+button.Text = "wp"
+button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+button.TextColor3 = Color3.fromRGB(255, 255, 255)
+button.Parent = screenGui
 
--- Collapse Button
-local toggleButton = Instance.new("TextButton")
-toggleButton.Size = UDim2.new(0,50,0,50)
-toggleButton.Position = UDim2.new(0.5,110,0.8,0)
-toggleButton.Text = "⯈"
-toggleButton.BackgroundColor3 = Color3.fromRGB(100,100,100)
-toggleButton.TextColor3 = Color3.new(1,1,1)
-toggleButton.Font = Enum.Font.SourceSansBold
-toggleButton.TextSize = 24
-toggleButton.Parent = screenGui
-toggleButton.Active = true
-toggleButton.AutoButtonColor = true
+-- Variables
+local platform
+local followConnection
+local dragging = false
+local dragStart, startPos
 
--- Toggle logic
-local collapsed = false
-toggleButton.MouseButton1Click:Connect(function()
-	collapsed = not collapsed
-	if collapsed then
-		mainButton.Visible = false
-		toggleButton.Text = "⯇"
-	else
-		mainButton.Visible = true
-		toggleButton.Text = "⯈"
-	end
+-- Function to create + follow platform
+local function makeFollowPlatform()
+    if platform then return end -- don’t make duplicates
+
+    local character = player.Character or player.CharacterAdded:Wait()
+    local root = character:WaitForChild("HumanoidRootPart")
+
+    platform = Instance.new("Part")
+    platform.Size = Vector3.new(1000, 100, 1000) -- big thick floor
+    platform.Anchored = true
+    platform.CanCollide = true
+    platform.Color = Color3.fromRGB(120, 200, 120)
+    platform.Name = "FollowPlatform"
+    platform.Parent = workspace
+
+    followConnection = RunService.RenderStepped:Connect(function()
+        if character and root then
+            platform.Position = root.Position - Vector3.new(0, 10, 0) -- 10 studs below
+        end
+    end)
+end
+
+-- Button click: toggle platform
+button.MouseButton1Click:Connect(function()
+    if not platform then
+        makeFollowPlatform()
+        button.Text = "wp (ON)"
+    else
+        -- Remove platform + stop updating
+        if followConnection then
+            followConnection:Disconnect()
+            followConnection = nil
+        end
+        platform:Destroy()
+        platform = nil
+        button.Text = "wp"
+    end
 end)
 
--- Draggable function
-local function makeDraggable(frame)
-	local dragging, dragInput, dragStart, startPos
-	local function update(input)
-		local delta = input.Position - dragStart
-		frame.Position = UDim2.new(
-			startPos.X.Scale,
-			startPos.X.Offset + delta.X,
-			startPos.Y.Scale,
-			startPos.Y.Offset + delta.Y
-		)
-	end
-	frame.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			dragging = true
-			dragStart = input.Position
-			startPos = frame.Position
-			input.Changed:Connect(function()
-				if input.UserInputState == Enum.UserInputState.End then
-					dragging = false
-				end
-			end)
-		end
-	end)
-	frame.InputChanged:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseMovement then
-			dragInput = input
-		end
-	end)
-	UserInputService.InputChanged:Connect(function(input)
-		if input == dragInput and dragging then
-			update(input)
-		end
-	end)
-end
+-- Make button draggable
+button.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = button.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
 
-makeDraggable(mainButton)
-makeDraggable(toggleButton)
-
--- 🔹 Spawn platform above player
-local function spawnPlatformAbove()
-	if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
-	local root = player.Character.HumanoidRootPart
-	local platform = Instance.new("Part")
-	platform.Size = platformSize
-	platform.Anchored = true
-	platform.CanCollide = true
-	platform.Color = platformColor
-	platform.Position = root.Position + Vector3.new(0,tpHeight,0)
-	platform.Name = "HighPlatform"
-	platform.Parent = workspace
-	root.CFrame = CFrame.new(platform.Position + Vector3.new(0,platform.Size.Y/2 + root.Size.Y/2,0))
-end
-
--- 🔹 Equip tool by name
-local function equipToolByName(toolName)
-	local char = player.Character
-	local backpack = player:WaitForChild("Backpack")
-	if not char then return nil end
-	local tool = backpack:FindFirstChild(toolName)
-	if tool then
-		char:FindFirstChildOfClass("Humanoid"):EquipTool(tool)
-		return tool
-	end
-	return nil
-end
-
--- 🔹 Start continuous C/V skill usage (dynamic)
-local function startContinuousCV(tool)
-	if not tool then return end
-	coroutine.wrap(function()
-		while tool.Parent and player.Character and player.Character:FindFirstChildOfClass("Humanoid") do
-			for _, child in pairs(tool:GetChildren()) do
-				if child.Name == "C" or child.Name == "V" then
-					if child:IsA("RemoteEvent") then
-						pcall(function() child:FireServer() end)
-					elseif child:IsA("BindableFunction") then
-						pcall(function() child:Invoke() end)
-					end
-				end
-			end
-			wait(0.1) -- adjust speed if needed
-		end
-	end)()
-end
-
--- 🔹 Main Button Click
-mainButton.MouseButton1Click:Connect(function()
-	spawnPlatformAbove()
-	local tool = equipToolByName("CidV2")
-	startContinuousCV(tool)
+button.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        if dragging then
+            local delta = input.Position - dragStart
+            button.Position = UDim2.new(
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
+            )
+        end
+    end
 end)
